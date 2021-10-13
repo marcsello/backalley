@@ -1,5 +1,6 @@
 from typing import List
 from queue import Queue
+import logging
 
 import os
 import os.path
@@ -22,7 +23,14 @@ class LocalFileCollector:
         if not self._source_list:
             raise ValueError("No sources provided")
 
+        # Check sources beforehand and fail early
+        for i, source in enumerate(source_list):
+            if not (os.path.isfile(source) or os.path.isdir(source)):
+                raise ValueError(f"{i}. element of source list is not a supported type: {source}")
+
         self._file_queue = Queue(queue_size)
+
+        self._logger = logging.getLogger(self.__class__.__name__)
 
     def collect(self):
         """
@@ -36,6 +44,11 @@ class LocalFileCollector:
             if os.path.isfile(source) or os.path.islink(source):
                 # Walk over dirs only
                 self._file_queue.put(source)
+                continue
+
+            if not os.path.isdir(source):
+                # This should only happen if the filesystem contents changed during the backup
+                self._logger.warning(f"{source} is not supported type. Skipping!")
                 continue
 
             for root, _, files in os.walk(source):
