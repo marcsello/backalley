@@ -23,7 +23,7 @@ class InfoCollector(Thread):
 
         self._stop_when_finished = False
 
-    def _calculate_checksum(self, file: FileInfo) -> hashlib.sha256:
+    def _calculate_checksum(self, file: FileInfo) -> bytes:
         self._logger.debug(f"Calculating checksum of {file.path}...")
         with file.open() as f:
             checksum = hashlib.sha256()
@@ -35,7 +35,7 @@ class InfoCollector(Thread):
                 checksum.update(chunk)
 
         self._logger.debug(f"Calculated checksum of {file.path}: {checksum.hexdigest()}")
-        return checksum
+        return checksum.digest()
 
     def run(self) -> None:
         while True:
