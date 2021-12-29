@@ -5,6 +5,8 @@ import logging
 import os
 import os.path
 
+from file_info import FileInfo
+
 
 class LocalFileCollector:
     """
@@ -54,7 +56,12 @@ class LocalFileCollector:
             for root, _, files in os.walk(source):
                 for file in files:
                     full_path = os.path.abspath(os.path.join(root, file))
-                    self._file_queue.put(full_path)
+
+                    self._file_queue.put(
+                        FileInfo(
+                            path=full_path
+                        )
+                    )
 
     @property
     def queue(self) -> Queue:
