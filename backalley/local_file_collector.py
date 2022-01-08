@@ -33,6 +33,7 @@ class LocalFileCollector:
         self._file_queue = Queue(queue_size)
 
         self._logger = logging.getLogger(self.__class__.__name__)
+        self._commonpath = os.path.commonpath(source_list)
 
     def collect(self):
         """
@@ -62,6 +63,10 @@ class LocalFileCollector:
                             path=full_path
                         )
                     )
+
+    @property
+    def commonpath(self):
+        return self._commonpath
 
     @property
     def queue(self) -> Queue:
