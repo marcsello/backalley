@@ -27,6 +27,10 @@ class LocalFileCollector:
 
         # Check sources beforehand and fail early
         for i, source in enumerate(source_list):
+
+            if not os.path.isabs(source):
+                raise ValueError(f"{i}. element of source list is not absolute path: {source}; Only absolute paths supported!")
+
             if not (os.path.isfile(source) or os.path.isdir(source)):
                 raise ValueError(f"{i}. element of source list is not a supported type: {source}")
 
