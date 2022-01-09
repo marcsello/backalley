@@ -5,7 +5,7 @@ from queue import Queue, Empty
 import hashlib
 import logging
 
-from file_info import FileInfo
+from entity_info import EntityInfo, EntityType
 
 
 class InfoCollector(Thread):
@@ -23,7 +23,7 @@ class InfoCollector(Thread):
 
         self._stop_when_finished = False
 
-    def _calculate_checksum(self, file: FileInfo) -> bytes:
+    def _calculate_checksum(self, file: EntityInfo) -> bytes:
         self._logger.debug(f"Calculating checksum of {file.path}...")
         with file.open() as f:
             checksum = hashlib.sha256()
@@ -41,18 +41,19 @@ class InfoCollector(Thread):
         while True:
 
             try:
-                file: Optional[FileInfo] = self._inqueue.get(timeout=5)
+                entity: Optional[EntityInfo] = self._inqueue.get(timeout=5)
             except Empty:
-                file = None
+                entity = None
 
-            if not file:
+            if not entity:
                 if self._stop_when_finished:
                     break
                 else:
                     continue
 
-            file.checksum = self._calculate_checksum(file)
-            file.size = os.path.getsize(file.path)
+            if entity.type == EntityType.FILE:
+                entity.checksum = self._calculate_checksum(entity)
+                entity.size = os.path.getsize(entity.path)
 
     def stop_when_finished(self):
         self._stop_when_finished = True

@@ -8,6 +8,7 @@ import socket
 import threading
 
 from local_file_collector import LocalFileCollector
+from entity_info import EntityType
 
 
 @pytest.fixture
@@ -26,6 +27,7 @@ def file_collector_instance():
         newdir = os.path.join(testdir2, dir_)
         os.makedirs(newdir)
         writeto("Hello world!", os.path.join(newdir, f"{dir_}.txt"))
+    os.makedirs(os.path.join(testdir2, 'delta'))
 
     yield LocalFileCollector([testdir1, testdir2])
     shutil.rmtree(testdir1)
@@ -49,6 +51,21 @@ def test_wrong_parameters():
 
     with pytest.raises(ValueError):
         LocalFileCollector(range(5))
+
+
+def test_same_dirs():
+    testdir = tempfile.mkdtemp()
+
+    with pytest.raises(ValueError):
+        LocalFileCollector([testdir, testdir])
+
+    nested = os.path.join(testdir, 'apple')
+    os.makedirs(nested)
+
+    with pytest.raises(ValueError):
+        LocalFileCollector([testdir, nested])
+
+    shutil.rmtree(testdir)
 
 
 def test_no_other_type():
@@ -86,17 +103,19 @@ def test_all_files_visited(file_collector_instance):
 
     t.join()
 
-    assert len(complete_list) == 5
-    for path in [
-        "test1.txt",
-        "test2.txt",
-        "alpha/alpha.txt",
-        "beta/beta.txt",
-        "gamma/gamma.txt"
+    assert len(complete_list) == 7
+    for entity in [
+        (file_collector_instance._source_list[0], EntityType.EMPTY_DIRECTORY),
+        (os.path.join(file_collector_instance._source_list[1], "test1.txt"), EntityType.FILE),
+        (os.path.join(file_collector_instance._source_list[1], "test2.txt"), EntityType.FILE),
+        (os.path.join(file_collector_instance._source_list[1], "alpha/alpha.txt"), EntityType.FILE),
+        (os.path.join(file_collector_instance._source_list[1], "beta/beta.txt"), EntityType.FILE),
+        (os.path.join(file_collector_instance._source_list[1], "gamma/gamma.txt"), EntityType.FILE),
+        (os.path.join(file_collector_instance._source_list[1], "delta"), EntityType.EMPTY_DIRECTORY)
     ]:
         cnt = 0
         for fpath in complete_list:
-            if fpath.path.endswith(path):
+            if fpath.path == entity[0] and fpath.type == entity[1]:
                 cnt += 1
 
         assert cnt == 1

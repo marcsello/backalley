@@ -5,7 +5,7 @@ import logging
 import os
 import os.path
 
-from file_info import FileInfo
+from entity_info import EntityInfo, EntityType
 
 
 class LocalFileCollector:
@@ -35,7 +35,7 @@ class LocalFileCollector:
             if not (os.path.isfile(source) or os.path.isdir(source)):
                 raise ValueError(f"{i}. element of source list is not a supported type: {source}")
 
-        self._file_queue = Queue(queue_size)
+        self._entity_queue = Queue(queue_size)
 
         self._logger = logging.getLogger(self.__class__.__name__)
         self._commonpath = os.path.commonpath(source_list)
@@ -51,7 +51,7 @@ class LocalFileCollector:
 
             if os.path.isfile(source) or os.path.islink(source):
                 # Walk over dirs only
-                self._file_queue.put(source)
+                self._entity_queue.put(source)
                 continue
 
             if not os.path.isdir(source):
@@ -59,15 +59,30 @@ class LocalFileCollector:
                 self._logger.warning(f"{source} is not supported type. Skipping!")
                 continue
 
-            for root, _, files in os.walk(source):
+            potentially_empty_dirs = [source]  # The root dir is potentially empty until it's visited
+            for root, dirs, files in os.walk(source):
+                potentially_empty_dirs.extend([os.path.join(root, d) for d in dirs])
+
+                if dirs or files:
+                    potentially_empty_dirs.remove(root)
+
                 for file in files:
                     full_path = os.path.abspath(os.path.join(root, file))
 
-                    self._file_queue.put(
-                        FileInfo(
-                            path=full_path
+                    self._entity_queue.put(
+                        EntityInfo(
+                            path=full_path,
+                            type=EntityType.FILE
                         )
                     )
+
+            for empty_dir in potentially_empty_dirs:
+                self._entity_queue.put(
+                    EntityInfo(
+                        path=empty_dir,
+                        type=EntityType.EMPTY_DIRECTORY
+                    )
+                )
 
     @property
     def commonpath(self):
@@ -75,4 +90,4 @@ class LocalFileCollector:
 
     @property
     def queue(self) -> Queue:
-        return self._file_queue
+        return self._entity_queue
