@@ -1,3 +1,4 @@
+import queue
 import sys
 import tempfile
 import pytest
@@ -7,6 +8,7 @@ import socket
 import threading
 
 from local_file_collector import LocalFileCollector
+
 
 @pytest.fixture
 def file_collector_instance():
@@ -33,17 +35,20 @@ def file_collector_instance():
 # constructor
 
 def test_abs_path_only():
-    print(os.getcwd(),flush=True)
+    print(os.getcwd(), flush=True)
     with pytest.raises(ValueError):
         LocalFileCollector(['alma/barack.txt'])
 
 
-def test_no_falsy():
+def test_wrong_parameters():
     with pytest.raises(ValueError):
         LocalFileCollector([])
 
     with pytest.raises(ValueError):
         LocalFileCollector(None)
+
+    with pytest.raises(ValueError):
+        LocalFileCollector(range(5))
 
 
 def test_no_other_type():
@@ -62,22 +67,39 @@ def test_no_other_type():
 # test collection
 def test_all_files_visited(file_collector_instance):
     complete_list = []
-    run = True
 
     def mover_thread():
-        while run:
-            item = file_collector_instance.queue.get(timeout=5)
+        while mover_thread.run:
+            try:
+                item = file_collector_instance.queue.get(timeout=2)
+            except queue.Empty:
+                return
             complete_list.append(item)
 
+    mover_thread.run = True
+
     t = threading.Thread(target=lambda: mover_thread())
-    t.run()
+    t.start()
 
     file_collector_instance.collect()
-    run = False
+    mover_thread.run = False
 
     t.join()
 
     assert len(complete_list) == 5
+    for path in [
+        "test1.txt",
+        "test2.txt",
+        "alpha/alpha.txt",
+        "beta/beta.txt",
+        "gamma/gamma.txt"
+    ]:
+        cnt = 0
+        for fpath in complete_list:
+            if fpath.path.endswith(path):
+                cnt += 1
+
+        assert cnt == 1
 
 
 # misc

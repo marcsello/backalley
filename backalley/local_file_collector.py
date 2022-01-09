@@ -20,16 +20,17 @@ class LocalFileCollector:
         :param queue_size: Size of the output queue. See. queue.Queue
         """
         super().__init__()
-        self._source_list = source_list.copy()
+        if (not source_list) or not isinstance(source_list, List):  # It needs to be a list for copy
+            raise ValueError("No or invalid sources provided")
 
-        if not self._source_list:
-            raise ValueError("No sources provided")
+        self._source_list = source_list.copy()
 
         # Check sources beforehand and fail early
         for i, source in enumerate(source_list):
 
             if not os.path.isabs(source):
-                raise ValueError(f"{i}. element of source list is not absolute path: {source}; Only absolute paths supported!")
+                raise ValueError(
+                    f"{i}. element of source list is not absolute path: {source}; Only absolute paths supported!")
 
             if not (os.path.isfile(source) or os.path.isdir(source)):
                 raise ValueError(f"{i}. element of source list is not a supported type: {source}")
