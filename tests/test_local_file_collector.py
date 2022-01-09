@@ -86,11 +86,14 @@ def test_all_files_visited(file_collector_instance):
     complete_list = []
 
     def mover_thread():
-        while mover_thread.run:
+        while True:
             try:
                 item = file_collector_instance.queue.get(timeout=2)
             except queue.Empty:
-                return
+                if not mover_thread.run:
+                    return
+                else:
+                    continue
             complete_list.append(item)
 
     mover_thread.run = True
